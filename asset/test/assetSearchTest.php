@@ -33,7 +33,7 @@ class assetSearchTest extends TestCase
     private static $datasetId;
     private static $dataset;
 
-    public static function setUpBeforeClass()
+    public static function setUpBeforeClass(): void
     {
         $client = new BigQueryClient([
             'projectId' => self::$projectId,
@@ -42,7 +42,7 @@ class assetSearchTest extends TestCase
         self::$dataset = $client->createDataset(self::$datasetId);
     }
 
-    public static function tearDownAfterClass()
+    public static function tearDownAfterClass(): void
     {
         self::$dataset->delete();
     }
@@ -53,12 +53,12 @@ class assetSearchTest extends TestCase
         $query = 'name:' . self::$datasetId;
 
         $this->runEventuallyConsistentTest(function () use ($scope, $query) {
-            $output = $this->runSnippet('search_all_resources', [
+            $output = $this->runFunctionSnippet('search_all_resources', [
                 $scope,
                 $query
             ]);
-            $this->assertContains(self::$datasetId, $output);
-        }, 10, true);
+            $this->assertStringContainsString(self::$datasetId, $output);
+        }, 3, true);
     }
 
     public function testSearchAllIamPolicies()
@@ -66,10 +66,10 @@ class assetSearchTest extends TestCase
         $scope = 'projects/' . self::$projectId;
         $query = 'policy:roles/owner';
 
-        $output = $this->runSnippet('search_all_iam_policies', [
+        $output = $this->runFunctionSnippet('search_all_iam_policies', [
             $scope,
             $query
         ]);
-        $this->assertContains(self::$projectId, $output);
+        $this->assertStringContainsString(self::$projectId, $output);
     }
 }

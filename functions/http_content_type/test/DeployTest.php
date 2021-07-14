@@ -29,6 +29,7 @@ require_once __DIR__ . '/TestCasesTrait.php';
  *
  * To skip deployment of a new function, run with "GOOGLE_SKIP_DEPLOYMENT=true".
  * To skip deletion of the tested function, run with "GOOGLE_KEEP_DEPLOYMENT=true".
+ * @group deploy
  */
 class DeployTest extends TestCase
 {
@@ -51,7 +52,7 @@ class DeployTest extends TestCase
 
             $this->assertEquals($test['code'], $resp->getStatusCode(), $test['content-type'] . ':');
             // Failures often lead to a large HTML page in the response body.
-            $this->assertContains($test['expected'], $actual, $test['content-type'] . ':');
+            $this->assertStringContainsString($test['expected'], $actual, $test['content-type'] . ':');
         }
     }
 }

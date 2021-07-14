@@ -31,6 +31,7 @@ require_once __DIR__ . '/TestCasesTrait.php';
  *
  * To skip deployment of a new function, run with "GOOGLE_SKIP_DEPLOYMENT=true".
  * To skip deletion of the tested function, run with "GOOGLE_KEEP_DEPLOYMENT=true".
+ * @group deploy
  */
 class DeployTest extends TestCase
 {
@@ -40,8 +41,8 @@ class DeployTest extends TestCase
     private static $entryPoint = 'helloHttp';
 
     /**
-      * @dataProvider cases
-      */
+     * @dataProvider cases
+     */
     public function testFunction(
         $label,
         $query,
@@ -59,6 +60,6 @@ class DeployTest extends TestCase
             $label . ':'
         );
         // Failures often lead to a large HTML page in the response body.
-        $this->assertContains($expected, $actual, $label . ':');
+        $this->assertStringContainsString($expected, $actual, $label . ':');
     }
 }

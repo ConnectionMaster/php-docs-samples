@@ -31,18 +31,15 @@ function isValidSlackWebhook(ServerRequestInterface $request): bool
     $SLACK_SECRET = getenv('SLACK_SECRET');
 
     // Check for headers
-    $timestamp = $request->getHeader('X-Slack-Request-Timestamp');
-    $signature = $request->getHeader('X-Slack-Signature');
+    $timestamp = $request->getHeaderLine('X-Slack-Request-Timestamp');
+    $signature = $request->getHeaderLine('X-Slack-Signature');
     if (!$timestamp || !$signature) {
         return false;
-    } else {
-        $timestamp = $timestamp[0];
-        $signature = $signature[0];
     }
 
     // Compute signature
-    $plaintext = 'v0:' . $timestamp . ':' . (string) $request->getBody();
-    $hash = 'v0=' . hash_hmac('sha256', $plaintext, $SLACK_SECRET);
+    $plaintext = sprintf('v0:%s:%s', $timestamp, $request->getBody());
+    $hash = sprintf('v0=%s', hash_hmac('sha256', $plaintext, $SLACK_SECRET));
 
     return $hash === $signature;
 }
@@ -86,7 +83,7 @@ function formatSlackMessage(Google_Service_Kgsearch_SearchResponse $kgResponse, 
         ], $attachmentJson);
     }
 
-    if ($entity['image']) {
+    if (isset($entity['image'])) {
         $imageJson = $entity['image'];
         $attachmentJson['image_url'] = $imageJson['contentUrl'];
     }

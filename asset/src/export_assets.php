@@ -29,7 +29,7 @@ use Google\Cloud\Asset\V1\OutputConfig;
  * @param string $dumpFilePath the file path where the assets will be dumped to.
  *        e.g.: gs://[bucket-name]/[asset-file-name].
  */
-function export_assets($projectId, $dumpFilePath)
+function export_assets(string $projectId, string $dumpFilePath)
 {
     $client = new AssetServiceClient();
 
@@ -49,3 +49,7 @@ function export_assets($projectId, $dumpFilePath)
     }
 }
 # [END asset_quickstart_export_assets]
+
+// The following 2 lines are only needed to run the samples
+require_once __DIR__ . '/../../testing/sample_helpers.php';
+\Google\Cloud\Samples\execute_sample(__FILE__, __NAMESPACE__, $argv);

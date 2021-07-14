@@ -12,7 +12,9 @@
     ]
   }],
   "ignorePaths": [
-    "appengine/flexible"
+      "appengine/flexible/"
   ],
-  "prConcurrentLimit": 5
+  "branchPrefix": "renovate/{{parentDir}}-",
+  "prConcurrentLimit": 10,
+  "dependencyDashboard": true
 }

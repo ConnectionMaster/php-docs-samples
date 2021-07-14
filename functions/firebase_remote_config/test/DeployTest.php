@@ -23,10 +23,8 @@ use Google\Auth\ApplicationDefaultCredentials;
 use Google\Auth\CredentialsLoader;
 use Google\Cloud\Logging\LoggingClient;
 use Google\Cloud\TestUtils\CloudFunctionDeploymentTrait;
-use Google\Cloud\TestUtils\EventuallyConsistentTestTrait;
-use Google\Cloud\TestUtils\GcloudWrapper\CloudFunction;
 use PHPUnit\Framework\TestCase;
-use PHPUnit\Framework\ExpectationFailedException;
+use GuzzleHttp\Psr7\Response;
 
 /**
  * Class DeployTest.
@@ -35,15 +33,15 @@ use PHPUnit\Framework\ExpectationFailedException;
  *
  * To skip deployment of a new function, run with "GOOGLE_SKIP_DEPLOYMENT=true".
  * To skip deletion of the tested function, run with "GOOGLE_KEEP_DEPLOYMENT=true".
+ * @group deploy
  */
 class DeployTest extends TestCase
 {
     use CloudFunctionDeploymentTrait;
-    use EventuallyConsistentTestTrait;
 
     /** @var string */
     private static $entryPoint = 'firebaseRemoteConfig';
-    
+
     /** @var string */
     private static $functionSignatureType = 'cloudevent';
 
@@ -100,17 +98,14 @@ class DeployTest extends TestCase
         string $expected
     ): void {
         // Trigger config update.
-        $objectUri = $this->updateRemoteConfig(
+        $apiResponse = $this->updateRemoteConfig(
             $key,
             $value
         );
-
-        // Give event and log systems a head start.
-        // If log retrieval fails to find logs for our function within retry limit, increase sleep time.
-        sleep(5);
+        $this->assertEquals($apiResponse->getStatusCode(), 200);
 
         $fiveMinAgo = date(\DateTime::RFC3339, strtotime('-5 minutes'));
-        $this->processFunctionLogs(self::$fn, $fiveMinAgo, function (\Iterator $logs) use ($expected, $label) {
+        $this->processFunctionLogs($fiveMinAgo, function (\Iterator $logs) use ($expected, $label) {
             // Concatenate all relevant log messages.
             $actual = '';
             foreach ($logs as $log) {
@@ -122,52 +117,8 @@ class DeployTest extends TestCase
 
             // Only testing one property to decrease odds the expected logs are
             // split between log requests.
-            $this->assertContains($expected, $actual, $label);
-        });
-    }
-
-    /**
-     * Retrieve and process logs for the defined function.
-     *
-     * @param CloudFunction $fn function whose logs should be checked.
-     * @param string $startTime RFC3339 timestamp marking start of time range to retrieve.
-     * @param callable $process callback function to run on the logs.
-     */
-    private function processFunctionLogs(CloudFunction $fn, string $startTime, callable $process)
-    {
-        $projectId = self::requireEnv('GOOGLE_PROJECT_ID');
-
-        if (empty(self::$loggingClient)) {
-            self::$loggingClient = new LoggingClient([
-                'projectId' => $projectId
-            ]);
-        }
-
-        // Define the log search criteria.
-        $logFullName = 'projects/' . $projectId . '/logs/cloudfunctions.googleapis.com%2Fcloud-functions';
-        $filter = sprintf(
-            'logName="%s" resource.labels.function_name="%s" timestamp>="%s"',
-            $logFullName,
-            $fn->getFunctionName(),
-            $startTime
-        );
-
-        echo "\nRetrieving logs [$filter]...\n";
-
-        // Check for new logs for the function.
-        $attempt = 1;
-        $this->runEventuallyConsistentTest(function () use ($filter, $process, &$attempt) {
-            $entries = self::$loggingClient->entries(['filter' => $filter]);
- 
-            // If no logs came in try again.
-            if (empty($entries->current())) {
-                echo 'Logs not found, attempting retry #' . $attempt++ . PHP_EOL;
-                throw new ExpectationFailedException('Log Entries not available');
-            }
-            echo 'Processing logs...' . PHP_EOL;
-
-            $process($entries);
-        }, $retries = 10);
+            $this->assertStringContainsString($expected, $actual, $label);
+        }, 10, 60);
     }
 
     /**
@@ -181,7 +132,7 @@ class DeployTest extends TestCase
     private function updateRemoteConfig(
         string $key,
         string $value
-    ): void {
+    ): Response {
         $projectId = self::requireEnv('GOOGLE_PROJECT_ID');
 
         if (empty(self::$apiHttpClient)) {
@@ -200,7 +151,7 @@ class DeployTest extends TestCase
                 ]
             ]
         ];
-        $response = self::$apiHttpClient->put('', [
+        return self::$apiHttpClient->put('', [
             'headers' => ['If-Match' => '*'],
             'json' => $json
         ]);

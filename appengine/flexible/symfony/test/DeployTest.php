@@ -69,7 +69,7 @@ class DeployTest extends TestCase
     private static function createSymfonyProject($targetDir)
     {
         // install
-        $symfonyVersion = 'symfony/framework-standard-edition:^3.0';
+        $symfonyVersion = 'symfony/framework-standard-edition:^4.4';
         $cmd = sprintf('composer create-project --no-scripts %s %s', $symfonyVersion, $targetDir);
         $process = self::createProcess($cmd);
         $process->setTimeout(300); // 5 minutes
@@ -125,7 +125,7 @@ class DeployTest extends TestCase
             'top page status code'
         );
         $content = $resp->getBody()->getContents();
-        $this->assertContains('Your application is now ready', $content);
+        $this->assertStringContainsString('Your application is now ready', $content);
     }
 
     public function testErrorLog()

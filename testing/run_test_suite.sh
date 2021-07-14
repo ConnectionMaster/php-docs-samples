@@ -23,9 +23,6 @@ fi
 FLAKES=(
     # Add directories here to run the tests but ignore them if they fail
     datastore/api
-    jobs
-    asset
-    appengine/flexible/logging
 )
 
 # Directories we do not want to run tests in, even if they exist
@@ -63,10 +60,12 @@ ALT_PROJECT_TESTS=(
     logging
     monitoring
     pubsub/api
+    pubsub/quickstart
     storage
     spanner
     video
     vision
+    compute/cloud-client/instances
 )
 
 TMP_REPORT_DIR=$(mktemp -d)
@@ -104,6 +103,12 @@ TESTCMD="$TESTDIR/vendor/bin/phpunit"
 if ! type $TESTCMD > /dev/null; then
   echo "run \"composer install -d testing/\" to install testing dependencies"
   exit 1
+fi
+
+if [ "${RUN_DEPLOYMENT_TESTS}" = "true" ]; then
+    TESTCMD="$TESTCMD --group deploy"
+else
+    TESTCMD="$TESTCMD --exclude-group deploy"
 fi
 
 run_tests()

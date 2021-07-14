@@ -27,6 +27,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * Class DeployTest.
+ * @group deploy
  */
 class DeployTest extends TestCase
 {
@@ -48,7 +49,7 @@ class DeployTest extends TestCase
     {
         if (is_null(self::$service) || is_null(self::$image)) {
             $projectId = self::requireEnv('GOOGLE_PROJECT_ID');
-            $versionId = self::requireEnv('GOOGLE_VERSION_ID');
+            $versionId = getenv('GOOGLE_VERSION_ID') ?: sprintf('eventarc-%s', time());
             self::$service = new CloudRun($projectId, ['service' => $versionId]);
             self::$image = sprintf('gcr.io/%s/%s:latest', $projectId, $versionId);
         }
@@ -115,11 +116,11 @@ class DeployTest extends TestCase
             'body' => 'my-body',
         ]);
         $this->assertEquals('200', $resp->getStatusCode());
-        $this->assertContains('HEADERS:', (string) $resp->getBody());
-        $this->assertContains('my-header', (string) $resp->getBody());
-        $this->assertNotContains('Authorization', (string) $resp->getBody());
-        $this->assertContains('BODY:', (string) $resp->getBody());
-        $this->assertContains('my-body', (string) $resp->getBody());
+        $this->assertStringContainsString('HEADERS:', (string) $resp->getBody());
+        $this->assertStringContainsString('my-header', (string) $resp->getBody());
+        $this->assertStringNotContainsString('Authorization', (string) $resp->getBody());
+        $this->assertStringContainsString('BODY:', (string) $resp->getBody());
+        $this->assertStringContainsString('my-body', (string) $resp->getBody());
     }
 
     public function getBaseUri()

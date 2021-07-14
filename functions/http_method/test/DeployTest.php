@@ -31,6 +31,7 @@ require_once __DIR__ . '/TestCasesTrait.php';
  *
  * To skip deployment of a new function, run with "GOOGLE_SKIP_DEPLOYMENT=true".
  * To skip deletion of the tested function, run with "GOOGLE_KEEP_DEPLOYMENT=true".
+ * @group deploy
  */
 class DeployTest extends TestCase
 {
@@ -40,8 +41,8 @@ class DeployTest extends TestCase
     private static $entryPoint = 'httpMethod';
 
     /**
-      * @dataProvider cases
-      */
+     * @dataProvider cases
+     */
     public function testFunction(
         $method,
         $statusCode,
@@ -59,6 +60,6 @@ class DeployTest extends TestCase
         // Assert function output.
         $output = trim((string) $resp->getBody());
         // Failures often lead to a large HTML page in the response body.
-        $this->assertContains($content, $output);
+        $this->assertStringContainsString($content, $output);
     }
 }

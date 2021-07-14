@@ -22,7 +22,7 @@ if (count($argv) < 4) {
 }
 list($_, $organizationId, $notificationConfigId, $projectId, $topicName) = $argv;
 
-// [START scc_update_notification_config]
+// [START securitycenter_update_notification_config]
 use Google\Cloud\SecurityCenter\V1\SecurityCenterClient;
 use Google\Cloud\SecurityCenter\V1\NotificationConfig;
 use Google\Cloud\SecurityCenter\V1\NotificationConfig\StreamingConfig;
@@ -52,4 +52,4 @@ $notificationConfig = (new NotificationConfig())
 $response = $securityCenterClient->updateNotificationConfig($notificationConfig, [$fieldMask]);
 printf('Notification config was updated: %s' . PHP_EOL, $response->getName());
 
-// [END scc_update_notification_config]
+// [END securitycenter_update_notification_config]

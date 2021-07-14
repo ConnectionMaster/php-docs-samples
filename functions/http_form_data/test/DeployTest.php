@@ -31,6 +31,7 @@ require_once __DIR__ . '/TestCasesTrait.php';
  *
  * To skip deployment of a new function, run with "GOOGLE_SKIP_DEPLOYMENT=true".
  * To skip deletion of the tested function, run with "GOOGLE_KEEP_DEPLOYMENT=true".
+ * @group deploy
  */
 class DeployTest extends TestCase
 {
@@ -54,7 +55,7 @@ class DeployTest extends TestCase
         ]);
         $this->assertEquals($statusCode, $resp->getStatusCode(), $label . ' code:');
         $actual = trim((string) $resp->getBody());
-        $this->assertContains($expected, $actual, $label . ':');
+        $this->assertStringContainsString($expected, $actual, $label . ':');
     }
 
     /**
@@ -76,6 +77,6 @@ class DeployTest extends TestCase
         $actualCode = $resp->getStatusCode();
 
         $this->assertEquals($statusCode, $actualCode, $label . ' code:');
-        $this->assertContains($expected, $actual, $label . ':');
+        $this->assertStringContainsString($expected, $actual, $label . ':');
     }
 }

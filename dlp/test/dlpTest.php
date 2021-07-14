@@ -19,6 +19,7 @@ namespace Google\Cloud\Samples\Dlp;
 
 use Google\Cloud\TestUtils\TestTrait;
 use PHPUnit\Framework\TestCase;
+use PHPUnitRetry\RetryTrait;
 
 /**
  * Unit Tests for dlp commands.
@@ -26,6 +27,7 @@ use PHPUnit\Framework\TestCase;
 class dlpTest extends TestCase
 {
     use TestTrait;
+    use RetryTrait;
 
     public function testInspectImageFile()
     {
@@ -34,7 +36,7 @@ class dlpTest extends TestCase
             __DIR__ . '/data/test.png'
         ]);
 
-        $this->assertContains('Info type: EMAIL_ADDRESS', $output);
+        $this->assertStringContainsString('Info type: EMAIL_ADDRESS', $output);
     }
 
     public function testInspectTextFile()
@@ -44,7 +46,7 @@ class dlpTest extends TestCase
             __DIR__ . '/data/test.txt'
         ]);
 
-        $this->assertContains('Info type: EMAIL_ADDRESS', $output);
+        $this->assertStringContainsString('Info type: EMAIL_ADDRESS', $output);
     }
 
     public function testInspectString()
@@ -54,7 +56,7 @@ class dlpTest extends TestCase
             "My name is Gary Smith and my email is gary@example.com"
         ]);
 
-        $this->assertContains('Info type: EMAIL_ADDRESS', $output);
+        $this->assertStringContainsString('Info type: EMAIL_ADDRESS', $output);
     }
 
     public function testListInfoTypes()
@@ -62,16 +64,16 @@ class dlpTest extends TestCase
         // list all info types
         $output = $this->runSnippet('list_info_types');
 
-        $this->assertContains('US_DEA_NUMBER', $output);
-        $this->assertContains('AMERICAN_BANKERS_CUSIP_ID', $output);
+        $this->assertStringContainsString('US_DEA_NUMBER', $output);
+        $this->assertStringContainsString('AMERICAN_BANKERS_CUSIP_ID', $output);
 
         // list info types with a filter
         $output = $this->runSnippet(
             'list_info_types',
             ['supported_by=RISK_ANALYSIS']
         );
-        $this->assertContains('AGE', $output);
-        $this->assertNotContains('AMERICAN_BANKERS_CUSIP_ID', $output);
+        $this->assertStringContainsString('AGE', $output);
+        $this->assertStringNotContainsString('AMERICAN_BANKERS_CUSIP_ID', $output);
     }
 
     public function testRedactImage()
@@ -98,7 +100,7 @@ class dlpTest extends TestCase
             'My SSN is 372819127.',
             $numberToMask,
         ]);
-        $this->assertContains('My SSN is xxxxx9127', $output);
+        $this->assertStringContainsString('My SSN is xxxxx9127', $output);
     }
 
     public function testDeidentifyDates()
@@ -160,12 +162,17 @@ class dlpTest extends TestCase
             $wrappedKey,
             $surrogateType,
         ]);
-        $this->assertContains($string, $reidOutput);
+        $this->assertStringContainsString($string, $reidOutput);
     }
 
     public function testTriggers()
     {
         $bucketName = $this->requireEnv('GOOGLE_STORAGE_BUCKET');
+        // Use a different bucket for triggers so we don't trigger a bunch of
+        // DLP jobs on our actual storage bucket. This will create the trigger
+        // on a nonexistant bucket.
+        $bucketName .= '-dlp-triggers';
+
         $displayName = uniqid("My trigger display name ");
         $description = uniqid("My trigger description ");
         $triggerId = uniqid('my-php-test-trigger-');
@@ -182,19 +189,19 @@ class dlpTest extends TestCase
             $autoPopulateTimespan,
         ]);
         $fullTriggerId = sprintf('projects/%s/locations/global/jobTriggers/%s', self::$projectId, $triggerId);
-        $this->assertContains('Successfully created trigger ' . $fullTriggerId, $output);
+        $this->assertStringContainsString('Successfully created trigger ' . $fullTriggerId, $output);
 
         $output = $this->runSnippet('list_triggers', [self::$projectId]);
-        $this->assertContains('Trigger ' . $fullTriggerId, $output);
-        $this->assertContains('Display Name: ' . $displayName, $output);
-        $this->assertContains('Description: ' . $description, $output);
-        $this->assertContains('Auto-populates timespan config: yes', $output);
+        $this->assertStringContainsString('Trigger ' . $fullTriggerId, $output);
+        $this->assertStringContainsString('Display Name: ' . $displayName, $output);
+        $this->assertStringContainsString('Description: ' . $description, $output);
+        $this->assertStringContainsString('Auto-populates timespan config: yes', $output);
 
         $output = $this->runSnippet('delete_trigger', [
             self::$projectId,
             $triggerId
         ]);
-        $this->assertContains('Successfully deleted trigger ' . $fullTriggerId, $output);
+        $this->assertStringContainsString('Successfully deleted trigger ' . $fullTriggerId, $output);
     }
 
     public function testInspectTemplates()
@@ -210,23 +217,30 @@ class dlpTest extends TestCase
             $displayName,
             $description
         ]);
-        $this->assertContains('Successfully created template ' . $fullTemplateId, $output);
+        $this->assertStringContainsString('Successfully created template ' . $fullTemplateId, $output);
 
         $output = $this->runSnippet('list_inspect_templates', [self::$projectId]);
-        $this->assertContains('Template ' . $fullTemplateId, $output);
-        $this->assertContains('Display Name: ' . $displayName, $output);
-        $this->assertContains('Description: ' . $description, $output);
+        $this->assertStringContainsString('Template ' . $fullTemplateId, $output);
+        $this->assertStringContainsString('Display Name: ' . $displayName, $output);
+        $this->assertStringContainsString('Description: ' . $description, $output);
 
         $output = $this->runSnippet('delete_inspect_template', [
             self::$projectId,
             $templateId
         ]);
-        $this->assertContains('Successfully deleted template ' . $fullTemplateId, $output);
+        $this->assertStringContainsString('Successfully deleted template ' . $fullTemplateId, $output);
     }
 
+    /**
+     * @retryAttempts 3
+     */
     public function testJobs()
     {
-        $filter = 'state=DONE';
+        // Set filter to only go back a day, so that we do not pull every job.
+        $filter = sprintf(
+            'state=DONE AND end_time>"%sT00:00:00+00:00"',
+            date('Y-m-d', strtotime('-1 day'))
+        );
         $jobIdRegex = "~projects/.*/dlpJobs/i-\d+~";
 
         $output = $this->runSnippet('list_jobs', [
@@ -242,6 +256,6 @@ class dlpTest extends TestCase
             'delete_job',
             [$jobId]
         );
-        $this->assertContains('Successfully deleted job ' . $jobId, $output);
+        $this->assertStringContainsString('Successfully deleted job ' . $jobId, $output);
     }
 }
